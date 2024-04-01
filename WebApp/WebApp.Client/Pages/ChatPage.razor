@@ -1,0 +1,60 @@
+﻿@page "/chat"
+@implements IDisposable
+@using ChatModels
+@using WebApp.Client.ClientServices
+@inject ChatService chatService
+@rendermode InteractiveWebAssembly
+<PageTitle>Netcode-Hub Chat</PageTitle>
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">Netcode-Hub Chat</div>
+            <div class="card-body">
+                <ul class="list-group"> 
+                    @foreach (var chat in chatService.Chats)
+                    {
+                        <li class="list-group-item mb-2">
+                            @chat.DateTime.Date.ToString("dd/MM/yy")
+                            <br />
+                            <span class="fw-bold">@chat.UserName:</span>
+                            <br />
+                            @chat.Message
+                        </li>
+                    }
+                </ul>
+                <div class="mt-3">
+                    <EditForm Model="Chat" OnValidSubmit="SendMessageClicked">
+                        <DataAnnotationsValidator/>
+                        <div class="vstask gap-1">
+                            <InputText @bind-Value="Chat.UserName" class="form-control w-25" placeholder="Username"/>
+                            <InputTextArea @bind-Value="Chat.Message" class="form-control" placeholder="Message"/>
+                        </div>
+                        <button class="float-end btn btn-success mt-3" type="submit">Send</button>
+                    </EditForm>
+                </div>
+            </div>
+            <div class="card-footer fw-bold">
+                @if (!chatService.IsConnected)
+                {
+                    <div class="alert alert-danger">Chat Disconnected</div>
+                }else{
+                    <div class="alert alert-success">Chat Connected</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    public static string? StoredUserName { get; set; }
+    private Chat Chat = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        chatService.InvokeChatDisplay += StateHasChanged;
+        await chatService.StartConnectionAsync();
+        chatService.ReceiveMessage();
+    }
+    async void SendMessageClicked() => await chatService.SendChat(Chat);
+    public void Dispose() => chatService.InvokeChatDisplay -= StateHasChanged;
+}
